@@ -5,4 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 add_compile_options(-Wall -Wextra -pedantic -Wfloat-equal -fno-stack-protector)
 
 
-add_executable(parse_tree_of_mathematical_expressions main.cpp)
+add_executable(parse_tree_of_mathematical_expressions
+        main.cpp
+        src/math_tree.cpp
+        src/math_tree.h)
