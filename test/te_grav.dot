@@ -1,0 +1,9 @@
+graph astdump {
+res [shape=doubleoctagon][label="result = 3"]
+_1_0[shape=box, color=blue]
+_1_0[label="+"]
+_1_0 -- _0V
+_0V [label="1"]
+_1_0 -- _2V2;
+_2V2 [label="2"]
+}

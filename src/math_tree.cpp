@@ -1,14 +1,26 @@
+/**
+* @file         math_tree.cpp
+* @brief        Definitions of methods for ast dumps
+* @author       Dvortsova Varvara BSE182 HSE
+*/
 #include "math_tree.h"
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <stack>
-#include <cctype>
 #include <cmath>
 #include <iostream>
-#include <fstream>
 #define  EQUATION_EPS 1e-9
+
+/**
+* @brief      Compare a double variable with zero
+* @param[in]  a  double variable
+* @return     0 if a == 0 else 1
+*/
+static bool isZero(double a) {
+    return fabs(a) < EQUATION_EPS;
+}
 
 const char* getNameOfOp(OP_TYPE type) {
     switch(type) {
@@ -23,6 +35,7 @@ const char* getNameOfOp(OP_TYPE type) {
         case NUM:
             return nullptr;
     }
+    return nullptr;
 }
 
 char* getExpressionFromFile(char* fName, int* size) {
@@ -66,9 +79,8 @@ bool getDoubleNumber(char* mnemonicStart, double* number) {
  * @param size
  * @return
  */
-std::vector<Token*> getTokens(char* expr, int size) {
+std::vector<Token*> getTokens(char* expr) {
     assert(expr != nullptr);
-
     int countOP = 0;
     std::vector<Token*> tokens;
     char* token = strtok(expr, " ");
@@ -128,33 +140,31 @@ std::vector<Token*> getTokens(char* expr, int size) {
         token = strtok(nullptr, " ");
     }
 
-    std::vector<Token*>::iterator it;
-    for (it = std::begin(tokens); it != std::end(tokens) ; ++it) {
-        if(dynamic_cast<UnMinus*>(*it) != nullptr) {
-            std::cout << "unMinus\n";
-        } else if (dynamic_cast<Pair*>(*it) != nullptr) {
-            std::cout << "Pair(" << dynamic_cast<Pair*>(*it)->getType() << ")\n";
-        } else if (dynamic_cast<Add*>(*it) != nullptr) {
-            std::cout << "add\n";
-        } else if (dynamic_cast<Sub*>(*it) != nullptr) {
-            std::cout << "sub\n";
-        } else if (dynamic_cast<Mul*>(*it) != nullptr) {
-            std::cout << "mul\n";
-        } else if (dynamic_cast<Div*>(*it) != nullptr) {
-            std::cout << "div\n";
-        } else if (dynamic_cast<Var*>(*it) != nullptr) {
-            std::cout << "var(" << dynamic_cast<Var*>(*it)->getValue() << ")\n";
-        }
-    }
+    //for debug
+//    std::vector<Token*>::iterator it;
+//    for (it = std::begin(tokens); it != std::end(tokens) ; ++it) {
+//        if(dynamic_cast<UnMinus*>(*it) != nullptr) {
+//            std::cout << "unMinus\n";
+//        } else if (dynamic_cast<Pair*>(*it) != nullptr) {
+//            std::cout << "Pair(" << dynamic_cast<Pair*>(*it)->getType() << ")\n";
+//        } else if (dynamic_cast<Add*>(*it) != nullptr) {
+//            std::cout << "add\n";
+//        } else if (dynamic_cast<Sub*>(*it) != nullptr) {
+//            std::cout << "sub\n";
+//        } else if (dynamic_cast<Mul*>(*it) != nullptr) {
+//            std::cout << "mul\n";
+//        } else if (dynamic_cast<Div*>(*it) != nullptr) {
+//            std::cout << "div\n";
+//        } else if (dynamic_cast<Var*>(*it) != nullptr) {
+//            std::cout << "var(" << dynamic_cast<Var*>(*it)->getValue() << ")\n";
+//        }
+//    }
     return tokens;
 }
 
-/**
- * Shunting-Yard
- * @param tokens
- * @return
- */
+
 Node* buildTree(std::vector<Token*>* tokens) {
+    assert(tokens);
     std::stack<Token*> stTokens;
     std::stack<Node*>  stNodes;
 
@@ -184,7 +194,6 @@ Node* buildTree(std::vector<Token*>* tokens) {
                             continue;
                         }
                     }
-                    //toDo
                     Node* node =  new Node();
                     if (dynamic_cast<Add*>(token) != nullptr) {
                         node->type = ADD;
@@ -205,7 +214,7 @@ Node* buildTree(std::vector<Token*>* tokens) {
                         auto* numForSub = stNodes.top();
                         stNodes.pop();
                         node->rightChild = numForSub;
-                        node->number = token->getNumber();
+                        node->index = token->getNumber();
                         stNodes.push(node);
 
                         stTokens.pop();//delete top
@@ -215,8 +224,7 @@ Node* buildTree(std::vector<Token*>* tokens) {
 
                     node->rightChild = stNodes.top();
                     stNodes.pop();
-
-                    node->number = token->getNumber();
+                    node->index = token->getNumber();
 
                     node->leftChild = stNodes.top();
                     stNodes.pop();
@@ -228,19 +236,26 @@ Node* buildTree(std::vector<Token*>* tokens) {
                 }
                 continue;
             }
-        } else if (dynamic_cast<Add*>(*it) != nullptr || dynamic_cast<Sub*>(*it) != nullptr) {
-           if(!stTokens.empty()){
+        } else if(dynamic_cast<Var*>(*it) != nullptr) {
+            Node* nodeVar;
+            nodeVar =  new Node();
+            nodeVar->type = NUM;
+            auto elem = dynamic_cast<Var*>(*it);
+            nodeVar->value =  elem->getValue();
+            nodeVar->leftChild = nullptr;
+            nodeVar->rightChild = nullptr;
+            nodeVar->index = elem->getNumber();
+            stNodes.push(nodeVar);
+        }
+
+        else {
+           if(!stTokens.empty()) {
                auto op2 = stTokens.top();
-               //todo add while
                bool isOk = true;
                while(isOk) {
-                   if((dynamic_cast<Sub*>(op2) != nullptr || dynamic_cast<Add*>(op2) != nullptr
-                       || dynamic_cast<Mul*>(op2) != nullptr || dynamic_cast<Div*>(op2) != nullptr
-                       || dynamic_cast<UnMinus*>(op2) != nullptr)) {
+                   if(op2->getPriority() >= (*it)->getPriority()) {
                        stTokens.pop();
                        Node* node =  new Node();
-
-                       //todo check is correct?
                        if(dynamic_cast<UnMinus*>(op2) != nullptr) {
                            node->type = SUB;
 
@@ -252,7 +267,7 @@ Node* buildTree(std::vector<Token*>* tokens) {
                            auto* numForSub = stNodes.top();
                            stNodes.pop();
                            node->rightChild = numForSub;
-                           node->number = op2->getNumber();
+                           node->index = op2->getNumber();
                            stNodes.push(node);
 
                            if(!stTokens.empty()) {
@@ -275,7 +290,7 @@ Node* buildTree(std::vector<Token*>* tokens) {
 
                        node->leftChild = stNodes.top();
                        stNodes.pop();
-                       node->number = op2->getNumber();
+                       node->index = op2->getNumber();
 
                        stNodes.push(node);
 
@@ -288,76 +303,8 @@ Node* buildTree(std::vector<Token*>* tokens) {
                    }
                }
            }
-
             stTokens.push(*it);
             continue;
-
-        } else if (dynamic_cast<Mul*>(*it) != nullptr || dynamic_cast<Div*>(*it) != nullptr) {
-            if(!stTokens.empty()) {
-                //todo add while and unMinus add
-                auto op2 = dynamic_cast<Token*>(stTokens.top());
-                bool isOk = true;
-                while (isOk) {
-                    if (dynamic_cast<Mul *>(op2) != nullptr || dynamic_cast<Div *>(op2) != nullptr ||
-                        dynamic_cast<UnMinus *>(op2) != nullptr) {
-                        stTokens.pop();
-                        Node *node = new Node();
-                        if (dynamic_cast<UnMinus *>(op2) != nullptr) {
-                            node->type = SUB;
-                            Node *lChild = new Node();
-                            lChild->type = NUM;
-                            lChild->value = 0;
-                            node->leftChild = lChild;
-
-                            auto *numForSub = stNodes.top();
-                            stNodes.pop();
-                            node->rightChild = numForSub;
-                            node->number = op2->getNumber();
-                            stNodes.push(node);
-
-                            if (!stTokens.empty()) {
-                                op2 = stTokens.top();
-                            } else isOk = false;
-                            continue;
-                        }
-
-                        if (dynamic_cast<Mul *>(op2) != nullptr) {
-                            node->type = MUL;
-                        } else if (dynamic_cast<Div *>(op2) != nullptr) {
-                            node->type = DIV;
-                        }
-
-                        node->rightChild = stNodes.top();
-                        stNodes.pop();
-                        node->leftChild = stNodes.top();
-                        stNodes.pop();
-
-                        node->number = op2->getNumber();
-
-                        stNodes.push(node);
-                        if (!stTokens.empty()) {
-                            op2 = stTokens.top();
-                        } else isOk = false;
-
-                    } else {
-                        isOk = false;
-                    }
-                }
-            }
-            stTokens.push(*it);
-            continue;
-        }
-        else if (dynamic_cast<Var*>(*it) != nullptr) {
-            Node* nodeVar;
-            nodeVar =  new Node();
-
-            nodeVar->type = NUM;
-            auto elem = dynamic_cast<Var*>(*it);
-            nodeVar->value =  elem->getValue();
-            nodeVar->leftChild = nullptr;
-            nodeVar->rightChild = nullptr;
-            nodeVar->number = elem->getNumber();
-            stNodes.push(nodeVar);
         }
     }
 
@@ -383,20 +330,18 @@ Node* buildTree(std::vector<Token*>* tokens) {
             auto* numForSub = stNodes.top();
             stNodes.pop();
             node->rightChild = numForSub;
-            node->number = token->getNumber();
+            node->index = token->getNumber();
 
             stNodes.push(node);
 
             stTokens.pop();//delete top
-
-            token = stTokens.top();//get next
             continue;
         }
 
         node->rightChild = stNodes.top();
         stNodes.pop();
 
-        node->number = token->getNumber();
+        node->index = token->getNumber();
 
         node->leftChild = stNodes.top();
         stNodes.pop();
@@ -404,11 +349,8 @@ Node* buildTree(std::vector<Token*>* tokens) {
         stNodes.push(node);
 
         stTokens.pop();//delete top
-
     }
 
-
-    //toDo free tokens
     for (auto & token : *tokens) {
         delete token;
     }
@@ -416,11 +358,12 @@ Node* buildTree(std::vector<Token*>* tokens) {
     auto tree = stNodes.top();
     stNodes.pop();
     return tree;
-
 }
 
 
 void gravizDump(char* outPath, Node* tree) {
+    assert(outPath);
+    assert(tree);
     int index = 0;
     std::ofstream myfile;
     myfile.open (outPath);
@@ -447,10 +390,11 @@ int calculate(Node* tree) {
                 return a - b;
             case DIV:
                 return a / b;
+            case NUM:
+                break;
         }
-    } else {
-        return tree->value;
     }
+    return tree->value;
 }
 
 
@@ -459,34 +403,34 @@ void gravizDeepWriting(std::ofstream& myfile, Node* tree, int *index) {
     if(tree == nullptr)
         return;
     if(tree->type != NUM) {
-        myfile << "_" << tree->number << "_" << tree->type << "[shape=box, color=blue]\n";
-        myfile << "_" << tree->number << "_" << tree->type << "[label=\"" << getNameOfOp(tree->type) << "\"]\n";
+        myfile << "_" << tree->index << "_" << tree->type << "[shape=box, color=blue]\n";
+        myfile << "_" << tree->index << "_" << tree->type << "[label=\"" << getNameOfOp(tree->type) << "\"]\n";
     } else {
         return;
     }
-    myfile << "_" << tree->number << "_" << tree->type << " -- ";
+    myfile << "_" << tree->index << "_" << tree->type << " -- ";
     if(tree->leftChild->type == NUM) {
-        myfile << "_" << tree ->leftChild->number << "V" ;
+        myfile << "_" << tree ->leftChild->index << "V" ;
         char temp[100] ="";
-        if(tree->leftChild->value == 0) {
+        if(isZero(tree->leftChild->value)) {
             sprintf(temp,"_%d0",(*index)++);
         }
         myfile << temp << "\n";
-        myfile << "_" << tree->leftChild->number << "V" << temp << " [label=\"" << tree->leftChild->value << "\"]\n";
+        myfile << "_" << tree->leftChild->index << "V" << temp << " [label=\"" << tree->leftChild->value << "\"]\n";
 
     }
     else {
-        myfile << "_" << tree->leftChild->number << "_" << tree->leftChild->type << ";\n";
+        myfile << "_" << tree->leftChild->index << "_" << tree->leftChild->type << ";\n";
     }
 
-    myfile << "_" << tree->number << "_";
+    myfile << "_" << tree->index << "_";
     myfile << tree->type << " -- ";
     if(tree->rightChild->type == NUM) {
-        myfile << "_" << tree ->rightChild->number << "V" << tree ->rightChild->value << ";\n";
-        myfile << "_" << tree ->rightChild->number << "V" << tree ->rightChild->value << " [label=\"" << tree ->rightChild->value << "\"]\n";
+        myfile << "_" << tree ->rightChild->index << "V" << tree ->rightChild->value << ";\n";
+        myfile << "_" << tree ->rightChild->index << "V" << tree ->rightChild->value << " [label=\"" << tree ->rightChild->value << "\"]\n";
     }
     else
-        myfile << "_" << tree->rightChild->number << "_" << tree->rightChild->type << ";\n";
+        myfile << "_" << tree->rightChild->index << "_" << tree->rightChild->type << ";\n";
 
     gravizDeepWriting(myfile, tree->leftChild, index);
     gravizDeepWriting(myfile, tree->rightChild, index);
@@ -496,7 +440,8 @@ void gravizDeepWriting(std::ofstream& myfile, Node* tree, int *index) {
 
 
 void latexDump(char* outPath, Node* tree) {
-    int index = 0;
+    assert(outPath);
+    assert(tree);
     std::ofstream myfile;
     myfile.open (outPath);
     myfile << "\\documentclass{article}\n";
@@ -506,9 +451,7 @@ void latexDump(char* outPath, Node* tree) {
     myfile << "$$";
     myfile << "\n";
     myfile << "\\end{document}\n";
-
     myfile.close();
-
 }
 
 void latexDeepWriting(std::ofstream& myfile, Node* root) {
@@ -534,11 +477,3 @@ void latexDeepWriting(std::ofstream& myfile, Node* root) {
 }
 
 
-/**
-* @brief      Compare a double variable with zero
-* @param[in]  a  double variable
-* @return     0 if a == 0 else 1
-*/
-static bool isZero(double a) {
-    return fabs(a) < EQUATION_EPS;
-}

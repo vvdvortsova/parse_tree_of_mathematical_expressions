@@ -1,29 +1,14 @@
 graph astdump {
-res [shape=doubleoctagon][label="result = 2"]
-_9_0[shape=box, color=blue]
-_9_0[label="+"]
-_9_0 -- _7_1;
-_9_0 -- _12_0;
-_7_1[shape=box, color=blue]
-_7_1[label="-"]
-_7_1 -- _5_2;
-_7_1 -- _8V8;
-_8V8 [label="8"]
-_5_2[shape=box, color=blue]
-_5_2[label="/"]
-_5_2 -- _2_0;
-_5_2 -- _6V7;
-_6V7 [label="7"]
-_2_0[shape=box, color=blue]
-_2_0[label="+"]
-_2_0 -- _1V
-_1V [label="1"]
-_2_0 -- _3V2;
-_3V2 [label="2"]
-_12_0[shape=box, color=blue]
-_12_0[label="+"]
-_12_0 -- _11V
-_11V [label="1"]
-_12_0 -- _13V9;
-_13V9 [label="9"]
+res [shape=doubleoctagon][label="result = 6"]
+_3_0[shape=box, color=blue]
+_3_0[label="+"]
+_3_0 -- _1_0;
+_3_0 -- _4V3;
+_4V3 [label="3"]
+_1_0[shape=box, color=blue]
+_1_0[label="+"]
+_1_0 -- _0V
+_0V [label="1"]
+_1_0 -- _2V2;
+_2V2 [label="2"]
 }

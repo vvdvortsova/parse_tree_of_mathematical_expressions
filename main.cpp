@@ -1,33 +1,19 @@
 #include <iostream>
-#include <cstring>
 #include "src/math_tree.h"
-void printtreenode(Node *root);
 
 int main() {
-    std::cout << "Hello, World!" << std::endl;
     int size = 0;
-    char* expr = getExpressionFromFile("../test1.txt", &size);
+    //TODO fix empty file
+    //TODO add checking on arg and improve token parsing
+    char* expr = getExpressionFromFile("gr1.txt", &size);
     std::cout << expr << "\n";
 
-    Node* node = (Node*)calloc(1, sizeof(node));
-
-    auto a = getTokens(expr, size);
+    auto a = getTokens(expr);
     auto tree = buildTree(&a);
-    gravizDump("../gr1.dot", tree);
-//    printtreenode(tree);
+    gravizDump("gr1.dot", tree);
 
     std::cout << "res = " << calculate(tree);
-    latexDump("../tex1.tex", tree);
-//    printf( " %s\n", token ); //printing the token
+    latexDump("gr1.tex", tree);
     return 0;
 }
 
-void printtreenode(Node *root)
-{
-    if(root == NULL)
-        return;
-
-    printtreenode(root -> leftChild);
-    printf("%d\n",root -> type);
-    printtreenode(root ->rightChild);
-}

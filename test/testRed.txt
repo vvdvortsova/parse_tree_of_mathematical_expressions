@@ -1,0 +1,24 @@
+graph astdump {
+res [shape=doubleoctagon][label="result = 23"]
+_5_0[shape=box, color=blue]
+_5_0[label="+"]
+_5_0 -- _3_0;
+_5_0 -- _8_0;
+_3_0[shape=box, color=blue]
+_3_0[label="+"]
+_3_0 -- _1_0;
+_3_0 -- _4V8;
+_4V8 [label="8"]
+_1_0[shape=box, color=blue]
+_1_0[label="+"]
+_1_0 -- _0V
+_0V [label="1"]
+_1_0 -- _2V2;
+_2V2 [label="2"]
+_8_0[shape=box, color=blue]
+_8_0[label="+"]
+_8_0 -- _7V
+_7V [label="12"]
+_8_0 -- _9V0;
+_9V0 [label="0"]
+}
