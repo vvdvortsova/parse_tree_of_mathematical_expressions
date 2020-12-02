@@ -1,4 +1,4 @@
-# AST TREE
+# AST OF MATH EXPRESSION
 
 Sorry for mix c/c++, because
 I just started writing in c++.\
