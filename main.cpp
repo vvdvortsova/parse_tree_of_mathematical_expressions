@@ -12,8 +12,12 @@ int main() {
     Node* node = (Node*)calloc(1, sizeof(node));
 
     auto a = getTokens(expr, size);
-    auto tree = buildTree(a);
-    printtreenode(tree);
+    auto tree = buildTree(&a);
+    gravizDump("../gr1.dot", tree);
+//    printtreenode(tree);
+
+    std::cout << "res = " << calculate(tree);
+    latexDump("../tex1.tex", tree);
 //    printf( " %s\n", token ); //printing the token
     return 0;
 }

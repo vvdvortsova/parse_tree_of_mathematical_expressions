@@ -2,6 +2,7 @@
 #define PARSE_TREE_OF_MATHEMATICAL_EXPRESSIONS_MATH_TREE_H
 
 #include <vector>
+#include <fstream>
 
 enum OP_TYPE {
     ADD = 0,
@@ -20,14 +21,18 @@ enum OP_PAIR {
 typedef struct Node {
     OP_TYPE type;
     double value;
+    double number;
     Node* leftChild;
     Node* rightChild;
 }Node;
 
 class Token {//make it abstract??
+    int num;
 public:
     Token()= default;
     virtual ~Token()= default;
+    void setNumber(int val){ this->num = val;}
+    int getNumber() const { return num;}
 };
 
 class Var:     public Token {
@@ -66,18 +71,20 @@ public:
 
 
 char* getExpressionFromFile(char* fName, int* size);
+void gravizDeepWriting(std::ofstream& myfile, Node* tree, int* index);
 
 std::vector<Token*> getTokens(char* expr, int size);
 
-Node* buildTree(std::vector<Token*> tokens);
+Node* buildTree(std::vector<Token*>* tokens);
 
-double countResult(Node* tree);
+void gravizDump(char* outPath, Node* tree);
 
-void printParseTree(Node* tree);
+void latexDump(char* outPath, Node* tree);
 
-void writeToFileForGraviz(char* outPath, Node* tree);
+void latexDeepWriting(std::ofstream& myfile, Node* root);
 
 const char* getNameOfOp(OP_TYPE type);
 
+int calculate(Node* tree);
 
 #endif //PARSE_TREE_OF_MATHEMATICAL_EXPRESSIONS_MATH_TREE_H

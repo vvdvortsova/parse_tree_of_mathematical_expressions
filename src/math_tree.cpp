@@ -7,7 +7,7 @@
 #include <cctype>
 #include <cmath>
 #include <iostream>
-
+#include <fstream>
 #define  EQUATION_EPS 1e-9
 
 const char* getNameOfOp(OP_TYPE type) {
@@ -69,28 +69,62 @@ bool getDoubleNumber(char* mnemonicStart, double* number) {
 std::vector<Token*> getTokens(char* expr, int size) {
     assert(expr != nullptr);
 
+    int countOP = 0;
     std::vector<Token*> tokens;
     char* token = strtok(expr, " ");
     while( token != nullptr ) {
         printf( " %s\n", token );
-
-        if(strcmp(token,"(") == 0) tokens.push_back(new Pair(OPEN));
-        else if(strcmp(token,"+") == 0) tokens.push_back(new Add());
-        else if(strcmp(token,"-") == 0) tokens.push_back(new Sub());
-        else if(strcmp(token,"/") == 0) tokens.push_back(new Div());
-        else if(strcmp(token,"*") == 0) tokens.push_back(new Mul());
-        else if(strcmp(token,")") == 0) tokens.push_back(new Pair(CLOSE));
+        if(strncmp(token,"(",1) == 0) {
+            auto elem = new Pair(OPEN);
+            elem->setNumber(countOP);
+            tokens.push_back(elem);
+            countOP++;
+        }
+        else if(strcmp(token,"+") == 0) {
+            auto elem = new Add();
+            elem->setNumber(countOP);
+            tokens.push_back(elem);
+            countOP++;
+        }
+        else if(strcmp(token,"-") == 0) {
+            auto elem = new Sub();
+            elem->setNumber(countOP);
+            tokens.push_back(elem);
+            countOP++;
+        }
+        else if(strcmp(token,"/") == 0) {
+            auto elem = new Div();
+            elem->setNumber(countOP);
+            tokens.push_back(elem);
+            countOP++;
+        }
+        else if(strcmp(token,"*") == 0) {
+            auto elem = new Mul();
+            elem->setNumber(countOP);
+            tokens.push_back(elem);
+            countOP++;
+        }
+        else if(strncmp(token,")", 1) == 0) {
+            auto elem = new Pair(CLOSE);
+            elem->setNumber(countOP);
+            tokens.push_back(elem);
+            countOP++;
+        }
         else {
             double num = 0;
             if(getDoubleNumber(token, &num)) {
                 if(num < 0) {//todo
-                    tokens.push_back((Token*)new UnMinus());
+                    auto elem = new UnMinus();
+                    elem->setNumber(countOP);
+                    tokens.push_back(elem);
                     num = -num;
+                    countOP++;
                 }
-                tokens.push_back((Token*)new Var(num));
+                auto elem = new Var(num);
+                elem->setNumber(countOP++);
+                tokens.push_back(elem);
             }
         }
-
         token = strtok(nullptr, " ");
     }
 
@@ -120,12 +154,12 @@ std::vector<Token*> getTokens(char* expr, int size) {
  * @param tokens
  * @return
  */
-Node* buildTree(std::vector<Token*> tokens) {
+Node* buildTree(std::vector<Token*>* tokens) {
     std::stack<Token*> stTokens;
     std::stack<Node*>  stNodes;
 
     std::vector<Token*>::iterator it;
-    for (it = std::begin(tokens); it != std::end(tokens) ; ++it) {
+    for (it = std::begin(*tokens); it != std::end(*tokens) ; ++it) {
         if(dynamic_cast<UnMinus*>(*it) != nullptr) {
             stTokens.push(*it);
             continue;
@@ -137,7 +171,7 @@ Node* buildTree(std::vector<Token*> tokens) {
             } else {  // pair == CLOSE
                 bool isOk = true;
                 while (isOk) {
-                    if(stTokens.empty()){
+                    if(stTokens.empty()) {
                         std::cout << "stack is empty\n";
                         break;
                     }
@@ -171,6 +205,7 @@ Node* buildTree(std::vector<Token*> tokens) {
                         auto* numForSub = stNodes.top();
                         stNodes.pop();
                         node->rightChild = numForSub;
+                        node->number = token->getNumber();
                         stNodes.push(node);
 
                         stTokens.pop();//delete top
@@ -180,6 +215,8 @@ Node* buildTree(std::vector<Token*> tokens) {
 
                     node->rightChild = stNodes.top();
                     stNodes.pop();
+
+                    node->number = token->getNumber();
 
                     node->leftChild = stNodes.top();
                     stNodes.pop();
@@ -194,51 +231,61 @@ Node* buildTree(std::vector<Token*> tokens) {
         } else if (dynamic_cast<Add*>(*it) != nullptr || dynamic_cast<Sub*>(*it) != nullptr) {
            if(!stTokens.empty()){
                auto op2 = stTokens.top();
-               if (dynamic_cast<Sub*>(op2) != nullptr || dynamic_cast<Add*>(op2) != nullptr
-                   || dynamic_cast<Mul*>(op2) != nullptr || dynamic_cast<Div*>(op2) != nullptr
-                   || dynamic_cast<UnMinus*>(op2) != nullptr) {
-                   stTokens.pop();
-                   Node* node =  new Node();
+               //todo add while
+               bool isOk = true;
+               while(isOk) {
+                   if((dynamic_cast<Sub*>(op2) != nullptr || dynamic_cast<Add*>(op2) != nullptr
+                       || dynamic_cast<Mul*>(op2) != nullptr || dynamic_cast<Div*>(op2) != nullptr
+                       || dynamic_cast<UnMinus*>(op2) != nullptr)) {
+                       stTokens.pop();
+                       Node* node =  new Node();
 
-                   //todo check is correct?
-                   if(dynamic_cast<UnMinus*>(op2) != nullptr) {
-                       node->type = SUB;
+                       //todo check is correct?
+                       if(dynamic_cast<UnMinus*>(op2) != nullptr) {
+                           node->type = SUB;
 
-                       Node* lChild =  new Node();
-                       lChild->type = NUM;
-                       lChild->value = 0;
-                       node->leftChild = lChild;
+                           Node* lChild =  new Node();
+                           lChild->type = NUM;
+                           lChild->value = 0;
+                           node->leftChild = lChild;
 
-                       auto* numForSub = stNodes.top();
+                           auto* numForSub = stNodes.top();
+                           stNodes.pop();
+                           node->rightChild = numForSub;
+                           node->number = op2->getNumber();
+                           stNodes.push(node);
+
+                           if(!stTokens.empty()) {
+                               op2 = stTokens.top();
+                           } else isOk = false;
+                           continue;
+                       }
+                       if (dynamic_cast<Add*>(op2) != nullptr) {
+                           node->type = ADD;
+                       } else if (dynamic_cast<Sub*>(op2) != nullptr) {
+                           node->type = SUB;
+                       } else if (dynamic_cast<Mul*>(op2) != nullptr) {
+                           node->type = MUL;
+                       } else if (dynamic_cast<Div*>(op2) != nullptr) {
+                           node->type = DIV;
+                       }
+
+                       node->rightChild = stNodes.top();
                        stNodes.pop();
-                       node->rightChild = numForSub;
+
+                       node->leftChild = stNodes.top();
+                       stNodes.pop();
+                       node->number = op2->getNumber();
+
                        stNodes.push(node);
 
-                       //push op1
-                       stTokens.push(*it);
-                       continue;
+                       if(!stTokens.empty()) {
+                           op2 = stTokens.top();
+                       } else isOk = false;
+
+                   } else {
+                       isOk = false;
                    }
-                   if (dynamic_cast<Add*>(op2) != nullptr) {
-                       node->type = ADD;
-                   } else if (dynamic_cast<Sub*>(op2) != nullptr) {
-                       node->type = SUB;
-                   } else if (dynamic_cast<Mul*>(op2) != nullptr) {
-                       node->type = MUL;
-                   } else if (dynamic_cast<Div*>(op2) != nullptr) {
-                       node->type = DIV;
-                   }
-
-                   node->rightChild = stNodes.top();
-                   stNodes.pop();
-
-                   node->leftChild = stNodes.top();
-                   stNodes.pop();
-
-                   stNodes.push(node);
-
-                   //push op1
-                   stTokens.push(*it);
-                   continue;
                }
            }
 
@@ -247,33 +294,58 @@ Node* buildTree(std::vector<Token*> tokens) {
 
         } else if (dynamic_cast<Mul*>(*it) != nullptr || dynamic_cast<Div*>(*it) != nullptr) {
             if(!stTokens.empty()) {
+                //todo add while and unMinus add
                 auto op2 = dynamic_cast<Token*>(stTokens.top());
-                if (dynamic_cast<Mul*>(op2) != nullptr || dynamic_cast<Div*>(op2) != nullptr) {
-                    stTokens.pop();
-                    Node* node =  new Node();
-                    if (dynamic_cast<Mul*>(op2) != nullptr) {
-                        node->type = MUL;
-                    } else if (dynamic_cast<Div*>(op2) != nullptr) {
-                        node->type = DIV;
+                bool isOk = true;
+                while (isOk) {
+                    if (dynamic_cast<Mul *>(op2) != nullptr || dynamic_cast<Div *>(op2) != nullptr ||
+                        dynamic_cast<UnMinus *>(op2) != nullptr) {
+                        stTokens.pop();
+                        Node *node = new Node();
+                        if (dynamic_cast<UnMinus *>(op2) != nullptr) {
+                            node->type = SUB;
+                            Node *lChild = new Node();
+                            lChild->type = NUM;
+                            lChild->value = 0;
+                            node->leftChild = lChild;
+
+                            auto *numForSub = stNodes.top();
+                            stNodes.pop();
+                            node->rightChild = numForSub;
+                            node->number = op2->getNumber();
+                            stNodes.push(node);
+
+                            if (!stTokens.empty()) {
+                                op2 = stTokens.top();
+                            } else isOk = false;
+                            continue;
+                        }
+
+                        if (dynamic_cast<Mul *>(op2) != nullptr) {
+                            node->type = MUL;
+                        } else if (dynamic_cast<Div *>(op2) != nullptr) {
+                            node->type = DIV;
+                        }
+
+                        node->rightChild = stNodes.top();
+                        stNodes.pop();
+                        node->leftChild = stNodes.top();
+                        stNodes.pop();
+
+                        node->number = op2->getNumber();
+
+                        stNodes.push(node);
+                        if (!stTokens.empty()) {
+                            op2 = stTokens.top();
+                        } else isOk = false;
+
+                    } else {
+                        isOk = false;
                     }
-
-                    node->rightChild = stNodes.top();
-                    stNodes.pop();
-                    node->leftChild  = stNodes.top();
-                    stNodes.pop();
-
-                    stNodes.push(node);
-                    stTokens.push(*it);
-                    continue;
                 }
-                stTokens.push(*it);
-                continue;
             }
-             else {
-                stTokens.push(*it);
-                continue;
-            }
-
+            stTokens.push(*it);
+            continue;
         }
         else if (dynamic_cast<Var*>(*it) != nullptr) {
             Node* nodeVar;
@@ -284,6 +356,7 @@ Node* buildTree(std::vector<Token*> tokens) {
             nodeVar->value =  elem->getValue();
             nodeVar->leftChild = nullptr;
             nodeVar->rightChild = nullptr;
+            nodeVar->number = elem->getNumber();
             stNodes.push(nodeVar);
         }
     }
@@ -310,6 +383,8 @@ Node* buildTree(std::vector<Token*> tokens) {
             auto* numForSub = stNodes.top();
             stNodes.pop();
             node->rightChild = numForSub;
+            node->number = token->getNumber();
+
             stNodes.push(node);
 
             stTokens.pop();//delete top
@@ -320,6 +395,8 @@ Node* buildTree(std::vector<Token*> tokens) {
 
         node->rightChild = stNodes.top();
         stNodes.pop();
+
+        node->number = token->getNumber();
 
         node->leftChild = stNodes.top();
         stNodes.pop();
@@ -332,10 +409,128 @@ Node* buildTree(std::vector<Token*> tokens) {
 
 
     //toDo free tokens
+    for (auto & token : *tokens) {
+        delete token;
+    }
+
     auto tree = stNodes.top();
     stNodes.pop();
     return tree;
 
+}
+
+
+void gravizDump(char* outPath, Node* tree) {
+    int index = 0;
+    std::ofstream myfile;
+    myfile.open (outPath);
+    myfile << "graph astdump {\n";
+    myfile << "res [shape=doubleoctagon]" << "[label=\"result = "<< calculate(tree)<<"\"]\n";
+    gravizDeepWriting(myfile, tree, &index);
+    myfile << "}\n";
+
+    myfile.close();
+
+}
+int calculate(Node* tree) {
+    if(tree == nullptr)
+        return 0;
+    if(tree->type != NUM) {
+        int a = calculate(tree->leftChild);
+        int b = calculate(tree->rightChild);
+        switch (tree->type) {
+            case ADD:
+                return a + b;
+            case MUL:
+                return a * b;
+            case SUB:
+                return a - b;
+            case DIV:
+                return a / b;
+        }
+    } else {
+        return tree->value;
+    }
+}
+
+
+
+void gravizDeepWriting(std::ofstream& myfile, Node* tree, int *index) {
+    if(tree == nullptr)
+        return;
+    if(tree->type != NUM) {
+        myfile << "_" << tree->number << "_" << tree->type << "[shape=box, color=blue]\n";
+        myfile << "_" << tree->number << "_" << tree->type << "[label=\"" << getNameOfOp(tree->type) << "\"]\n";
+    } else {
+        return;
+    }
+    myfile << "_" << tree->number << "_" << tree->type << " -- ";
+    if(tree->leftChild->type == NUM) {
+        myfile << "_" << tree ->leftChild->number << "V" ;
+        char temp[100] ="";
+        if(tree->leftChild->value == 0) {
+            sprintf(temp,"_%d0",(*index)++);
+        }
+        myfile << temp << "\n";
+        myfile << "_" << tree->leftChild->number << "V" << temp << " [label=\"" << tree->leftChild->value << "\"]\n";
+
+    }
+    else {
+        myfile << "_" << tree->leftChild->number << "_" << tree->leftChild->type << ";\n";
+    }
+
+    myfile << "_" << tree->number << "_";
+    myfile << tree->type << " -- ";
+    if(tree->rightChild->type == NUM) {
+        myfile << "_" << tree ->rightChild->number << "V" << tree ->rightChild->value << ";\n";
+        myfile << "_" << tree ->rightChild->number << "V" << tree ->rightChild->value << " [label=\"" << tree ->rightChild->value << "\"]\n";
+    }
+    else
+        myfile << "_" << tree->rightChild->number << "_" << tree->rightChild->type << ";\n";
+
+    gravizDeepWriting(myfile, tree->leftChild, index);
+    gravizDeepWriting(myfile, tree->rightChild, index);
+}
+
+
+
+
+void latexDump(char* outPath, Node* tree) {
+    int index = 0;
+    std::ofstream myfile;
+    myfile.open (outPath);
+    myfile << "\\documentclass{article}\n";
+    myfile << "\\begin{document}\n";
+    myfile << "$$";
+    latexDeepWriting(myfile, tree);
+    myfile << "$$";
+    myfile << "\n";
+    myfile << "\\end{document}\n";
+
+    myfile.close();
+
+}
+
+void latexDeepWriting(std::ofstream& myfile, Node* root) {
+    if(root == nullptr)
+        return;
+    if(root->type != NUM) {
+        if (root->type == DIV) {
+            myfile << "\\frac{";
+            latexDeepWriting(myfile, root->leftChild);
+            myfile << "}{";
+            latexDeepWriting(myfile, root->rightChild);
+            myfile << "}";
+            return;
+        }
+        myfile << "(";
+        latexDeepWriting(myfile, root->leftChild);
+        myfile << getNameOfOp(root->type);
+        latexDeepWriting(myfile, root->rightChild);
+        myfile << ")";
+    } else {
+        myfile << root->value;
+    }
 }
 
 
@@ -344,6 +539,6 @@ Node* buildTree(std::vector<Token*> tokens) {
 * @param[in]  a  double variable
 * @return     0 if a == 0 else 1
 */
-static bool isZero(double a){
+static bool isZero(double a) {
     return fabs(a) < EQUATION_EPS;
 }
