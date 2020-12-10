@@ -1,4 +1,7 @@
 # AST TREE
+It's a part of task for ISP RAS course.
+
+To build ast tree I use marshalling yard algorithm.
 
 Sorry for mix c/c++, because
 I just started writing in c++.\
