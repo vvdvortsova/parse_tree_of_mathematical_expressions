@@ -1,4 +1,4 @@
-# AST TREE
+# AST OF MATH EXPRESSION
 It's a part of task for ISP RAS course.
 
 To build ast tree I use marshalling yard algorithm.
