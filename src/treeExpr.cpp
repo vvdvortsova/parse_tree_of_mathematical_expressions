@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
         system(grName);
         sprintf(grName,"%s_tex.tex", argv[1]);
         latexDump(grName, tree);
-        sprintf(grName,"pdflatex -pdf %s_tex.tex", argv[1]);
+        sprintf(grName,"pdflatex %s_tex.tex", argv[1]);
         system(grName);
         return EXIT_SUCCESS;
     }
